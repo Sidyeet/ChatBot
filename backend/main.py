@@ -19,23 +19,7 @@ from .migrations import sync_schema
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Create database tables (creates new tables if they don't exist)
-logger.info("Creating database tables if they don't exist...")
-Base.metadata.create_all(bind=engine)
-logger.info("✓ Database tables creation completed")
 
-# Sync schema - adds missing columns to existing tables
-logger.info("Synchronizing database schema...")
-try:
-    sync_schema(engine, Base)
-    logger.info("✓ Schema synchronization completed successfully")
-except Exception as e:
-    logger.error(f"✗ Schema synchronization failed: {e}")
-    logger.error(f"  Error type: {type(e).__name__}")
-    import traceback
-    logger.error(f"  Traceback: {traceback.format_exc()}")
-    # Don't fail startup - but log the error clearly
-    logger.warning("⚠ Continuing startup despite schema sync failure. Uploads may fail!")
 
 # Custom Swagger UI CSS matching frontend theme
 CUSTOM_SWAGGER_CSS = """
@@ -238,6 +222,21 @@ async def health_check(db: Session = Depends(get_db)):
 @app.on_event("startup")
 async def startup_event():
     logger.info("Chatbot API starting up...")
+    
+    # Initialize Database
+    try:
+        logger.info("Creating database tables if they don't exist...")
+        Base.metadata.create_all(bind=engine)
+        logger.info("✓ Database tables creation completed")
+
+        logger.info("Synchronizing database schema...")
+        sync_schema(engine, Base)
+        logger.info("✓ Schema synchronization completed successfully")
+    except Exception as e:
+        logger.error(f"✗ Database initialization failed: {e}")
+        import traceback
+        logger.error(f"  Traceback: {traceback.format_exc()}")
+    
     logger.info(f"Environment: {settings.ENVIRONMENT}")
     logger.info(f"Database: {settings.DATABASE_URL.split('@') if '@' in settings.DATABASE_URL else 'unknown'}")
     logger.info(f"LLM Provider: Groq API")
