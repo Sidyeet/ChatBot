@@ -123,19 +123,38 @@ export async function getStatistics() {
 }
 
 /**
- * Health check
+ * Health check with retry logic for Render cold starts.
+ * Render free tier spins down after inactivity and takes ~50s to wake up.
+ * We retry up to 3 times with increasing delays to handle this.
  */
 export async function checkHealth() {
-  try {
-    const response = await fetch(`${API_BASE_URL}/health`);
+  const maxRetries = 3;
+  const retryDelayMs = 15000; // 15 seconds between retries
 
-    if (!response.ok) {
-      throw new Error("API is down");
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 20000); // 20s timeout per attempt
+
+      const response = await fetch(`${API_BASE_URL}/health`, {
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        throw new Error("API is down");
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.warn(`Health check attempt ${attempt}/${maxRetries} failed:`, error.message);
+      if (attempt < maxRetries) {
+        // Wait before retrying (server is likely waking up)
+        await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+      } else {
+        console.error("Health check failed after all retries");
+        throw error;
+      }
     }
-
-    return await response.json();
-  } catch (error) {
-    console.error("Health check failed:", error);
-    throw error;
   }
 }

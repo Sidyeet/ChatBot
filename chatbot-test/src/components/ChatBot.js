@@ -12,11 +12,11 @@ const ChatBot = ({ userId = "anonymous", portalName = "PE/VC Portal" }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [isOnline, setIsOnline] = useState(true);
+  const [isOnline, setIsOnline] = useState(null); // null = checking, true = online, false = offline
   const [showChat, setShowChat] = useState(false);
   const messagesEndRef = useRef(null);
 
-  // Check API health on mount
+  // Check API health on mount (retries for Render cold start)
   useEffect(() => {
     checkHealth()
       .then(() => setIsOnline(true))
@@ -92,7 +92,15 @@ const ChatBot = ({ userId = "anonymous", portalName = "PE/VC Portal" }) => {
     }
   };
 
-  if (!isOnline) {
+  if (isOnline === null) {
+    return (
+      <div className="chatbot-offline" style={{ background: '#fff3cd', color: '#856404', border: '1px solid #ffc107' }}>
+        <p>⏳ Waking up server... This may take up to 60 seconds on the free tier.</p>
+      </div>
+    );
+  }
+
+  if (isOnline === false) {
     return (
       <div className="chatbot-offline">
         <p>❌ Chatbot is currently offline. Please try again later.</p>
