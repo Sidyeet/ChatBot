@@ -155,6 +155,7 @@ cors_origins = [
     "http://localhost:8001",          # FastAPI itself
     "http://127.0.0.1:3000",
     "http://127.0.0.1:8001",
+    "https://chat-bot-phi-seven.vercel.app",  # Deployed Vercel frontend
 ]
 # Add deployed frontend URL if set
 if settings.FRONTEND_URL and settings.FRONTEND_URL not in cors_origins:
