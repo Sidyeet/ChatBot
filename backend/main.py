@@ -219,23 +219,27 @@ async def health_check(db: Session = Depends(get_db)):
         }, 500
 
 # Startup event
+import asyncio
+
+async def initialize_database():
+    """Background task to initialize database without blocking startup"""
+    try:
+        logger.info("Background: Initializing database tables...")
+        Base.metadata.create_all(bind=engine)
+        logger.info("✓ Background: Database tables creation completed")
+
+        logger.info("Background: Synchronizing database schema...")
+        sync_schema(engine, Base)
+        logger.info("✓ Background: Schema synchronization completed successfully")
+    except Exception as e:
+        logger.error(f"✗ Background: Database initialization failed: {e}")
+
 @app.on_event("startup")
 async def startup_event():
     logger.info("Chatbot API starting up...")
     
-    # Initialize Database
-    try:
-        logger.info("Creating database tables if they don't exist...")
-        Base.metadata.create_all(bind=engine)
-        logger.info("✓ Database tables creation completed")
-
-        logger.info("Synchronizing database schema...")
-        sync_schema(engine, Base)
-        logger.info("✓ Schema synchronization completed successfully")
-    except Exception as e:
-        logger.error(f"✗ Database initialization failed: {e}")
-        import traceback
-        logger.error(f"  Traceback: {traceback.format_exc()}")
+    # Fire and forget database initialization so we bind to port immediately
+    asyncio.create_task(initialize_database())
     
     logger.info(f"Environment: {settings.ENVIRONMENT}")
     logger.info(f"Database: {settings.DATABASE_URL.split('@') if '@' in settings.DATABASE_URL else 'unknown'}")
