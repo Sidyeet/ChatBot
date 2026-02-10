@@ -1,7 +1,8 @@
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_groq import ChatGroq
-from langchain_community.document_loaders import PyPDFLoader, TextLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+"""
+RAG Pipeline - with deferred heavy imports for fast startup on Render.
+Heavy libraries (torch, transformers, sentence-transformers) are imported
+INSIDE class methods, not at module level, so the app can bind to port instantly.
+"""
 from .config import settings
 import json
 import logging
@@ -15,7 +16,14 @@ class RAGPipeline:
     """
     
     def __init__(self):
-        """Initialize RAG components"""
+        """Initialize RAG components - imports happen here, not at module level"""
+        # Import heavy libraries only when RAGPipeline is actually created
+        from langchain_community.embeddings import HuggingFaceEmbeddings
+        from langchain_groq import ChatGroq
+        from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+        logger.info("Loading AI models (first request only)...")
+
         # Embeddings model - converts text to 384-dimensional vectors
         self.embeddings = HuggingFaceEmbeddings(
             model_name="all-MiniLM-L6-v2",
@@ -41,6 +49,7 @@ class RAGPipeline:
     def load_pdf(self, file_path: str):
         """Load and process a PDF file into chunks"""
         try:
+            from langchain_community.document_loaders import PyPDFLoader
             loader = PyPDFLoader(file_path)
             documents = loader.load()
             return self.text_splitter.split_documents(documents)
@@ -51,6 +60,7 @@ class RAGPipeline:
     def load_text(self, file_path: str):
         """Load and process a text file into chunks"""
         try:
+            from langchain_community.document_loaders import TextLoader
             loader = TextLoader(file_path, encoding='utf-8')
             documents = loader.load()
             return self.text_splitter.split_documents(documents)
@@ -115,3 +125,4 @@ def get_rag_pipeline():
     preventing startup timeouts on Render.
     """
     return RAGPipeline()
+
