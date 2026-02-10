@@ -8,13 +8,16 @@ import json
 from .database import get_db
 from .models import ChatMessage, UnansweredQuery, Document
 from .schemas import ChatMessageInput, ChatMessageResponse
-from .rag_pipeline import RAGPipeline
+from .rag_pipeline import get_rag_pipeline, RAGPipeline
 
 router = APIRouter(prefix="/chat", tags=["chat"])
-rag_pipeline = RAGPipeline()
 
 @router.post("", response_model=ChatMessageResponse)
-async def chat(request: ChatMessageInput, db: Session = Depends(get_db)):
+async def chat(
+    request: ChatMessageInput, 
+    db: Session = Depends(get_db),
+    rag_pipeline: RAGPipeline = Depends(get_rag_pipeline)
+):
     """
     Main chat endpoint
     - Receives user question

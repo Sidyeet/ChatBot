@@ -10,17 +10,17 @@ import tempfile
 from .database import get_db, engine, Base
 from .models import Document, UnansweredQuery, ChatMessage
 from .schemas import DocumentUploadResponse, UnansweredQueryResponse, AdminResponseInput, StatsResponse
-from .rag_pipeline import RAGPipeline
+from .rag_pipeline import get_rag_pipeline, RAGPipeline
 from .migrations import sync_schema
 
 router = APIRouter(prefix="/admin", tags=["admin"])
-rag_pipeline = RAGPipeline()
 
 @router.post("/upload-document", response_model=DocumentUploadResponse)
 async def upload_document(
     file: UploadFile = File(...),
     doc_type: str = "faq",
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    rag_pipeline: RAGPipeline = Depends(get_rag_pipeline)
 ):
     """
     Upload new FAQ/document to knowledge base

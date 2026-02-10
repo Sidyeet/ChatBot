@@ -104,3 +104,14 @@ Answer:"""
         except Exception as e:
             print(f"Error calculating relevance: {e}")
             return 0.0
+
+from functools import lru_cache
+
+@lru_cache()
+def get_rag_pipeline():
+    """
+    Singleton dependency for RAG Pipeline.
+    Lazy loads the heavy model only when first used,
+    preventing startup timeouts on Render.
+    """
+    return RAGPipeline()
